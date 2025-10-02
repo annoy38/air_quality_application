@@ -67,15 +67,19 @@ def _get_da(tree: DataTree, path: str):
         node = node[p]
     return node.to_dataset()[parts[-1]]
 
+# tempo_api.py  (replace the whole function)
 def harmony_fetch_files(auth: tuple[str,str], bbox: tuple[float,float,float,float],
                         t_stop_utc: dt.datetime, window_hours: int,
                         download_dir: Path) -> list[str]:
+    """Download any matching granules from both L2 NRT V02 and L3 NRT V02 into download_dir."""
     W,S,E,N = bbox
     t_start_utc = t_stop_utc - dt.timedelta(hours=window_hours)
     ensure_dir(download_dir)
     h = Client(env=Environment.PROD, auth=auth)
 
-    for coll in (COLLECTION_NO2_L2NRT, COLLECTION_NO2_L3NRT):
+    files_all: list[str] = []
+    # Try BOTH; some days have only one or the other
+    for coll in (COLLECTION_NO2_L2NRT,):
         req = Request(
             collection=Collection(id=coll),
             spatial=BBox(W,S,E,N),
@@ -91,10 +95,18 @@ def harmony_fetch_files(auth: tuple[str,str], bbox: tuple[float,float,float,floa
             files = [f.result() for f in downloads]
             files = [f for f in files if f and Path(f).exists() and Path(f).stat().st_size > 0]
             if files:
-                return files
+                files_all.extend(files)
         except Exception as e:
             print(f"[Harmony] {coll} failed: {e}")
-    return []
+
+    # de-dupe by filename
+    files_all = sorted(set(files_all))
+    if not files_all:
+        print("[Harmony] No files returned for this window/bbox.")
+    else:
+        print(f"[Harmony] Downloaded {len(files_all)} granules.")
+    return files_all
+
 
 def subset_stack_to_df(files: list[str],
                        t0: dt.datetime, t1: dt.datetime,
@@ -161,8 +173,20 @@ def subset_stack_to_df(files: list[str],
             except Exception:
                 return None
 
-        GEO_LON_CANDS = ["geolocation/longitude", "GEOLOCATION/longitude", "lon", "longitude"]
-        GEO_LAT_CANDS = ["geolocation/latitude", "GEOLOCATION/latitude", "lat", "latitude"]
+        # tempo_api.py  (inside subset_stack_to_df -> subset_one)
+        GEO_LON_CANDS = [
+            "geolocation/longitude", "GEOLOCATION/longitude",
+            "geolocation_fields/longitude", "GEOLOCATION_FIELDS/longitude",
+            "PRODUCT/longitude", "product/longitude",
+            "lon", "longitude"
+        ]
+        GEO_LAT_CANDS = [
+            "geolocation/latitude", "GEOLOCATION/latitude",
+            "geolocation_fields/latitude", "GEOLOCATION_FIELDS/latitude",
+            "PRODUCT/latitude", "product/latitude",
+            "lat", "latitude"
+        ]
+
         GeoLon = None
         GeoLat = None
 

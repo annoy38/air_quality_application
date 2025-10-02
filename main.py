@@ -155,7 +155,37 @@ class Main:
             traceback.print_exc()
         _log("=== RUN COMPLETE ===")
 
+from datetime import date  # add to imports at top if not present
+
+def run_range(start_day: str, end_day: str):
+    """
+    Run the full pipeline for an inclusive UTC date range [start_day, end_day].
+    Each day will fetch TEMPO, OpenAQ, Weather and write the daily fused CSV.
+    start_day/end_day format: 'YYYY-MM-DD'
+    """
+    d0 = date.fromisoformat(start_day)
+    d1 = date.fromisoformat(end_day)
+    d = d0
+    while d <= d1:
+        ds = d.isoformat()
+        _log(f"=== RANGE RUN day {ds} ===")
+        Main(ds).run()
+        d += timedelta(days=1)
+
+
 if __name__ == "__main__":
-    # Hard-code your UTC date here:
-    DAY = "2025-10-01"
-    Main(DAY).run()
+    # Options:
+    #   a) Single day:      DAY=2025-10-01 python main.py
+    #   b) Range (inclusive): START_DAY=2025-09-21 END_DAY=2025-09-30 python main.py
+    #
+    # If neither env var is set, it defaults to the hard-coded DAY below.
+
+    START = os.getenv("START_DAY", "").strip()
+    END   = os.getenv("END_DAY", "").strip()
+
+    if START and END:
+        run_range(START, END)
+    else:
+        DAY = os.getenv("DAY", "2025-10-01")
+        Main(DAY).run()
+

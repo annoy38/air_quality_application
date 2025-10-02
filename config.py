@@ -39,6 +39,12 @@ def get_config() -> Dict[str, Any]:
         "WEATHER_CONCURRENCY": os.getenv("WEATHER_CONCURRENCY", "12").strip(),
         "OPENAQ_MAX_SENSORS": os.getenv("OPENAQ_MAX_SENSORS", "80").strip(),
         "HTTP_TIMEOUT": os.getenv("HTTP_TIMEOUT", "30").strip(),
+        "SMTP_HOST": os.getenv("SMTP_HOST", "").strip(),
+        "SMTP_PORT": os.getenv("SMTP_PORT", "587").strip(),
+        "SMTP_USER": os.getenv("SMTP_USER", "").strip(),
+        "SMTP_PASS": os.getenv("SMTP_PASS", "").strip(),
+        "SMTP_FROM": os.getenv("SMTP_FROM", "").strip(),
+        "SMTP_STARTTLS": os.getenv("SMTP_STARTTLS", "1").strip(),
     }
     return cfg
 
