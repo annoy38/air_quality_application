@@ -1,0 +1,242 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Validate Page</title>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+
+  <style>
+    body { background-color:#111; color:#fff !important; font-family:'Segoe UI',sans-serif; }
+    .card{ background:#1a1a1a; border:none; border-radius:12px; padding:18px; margin-bottom:20px; color:#fff !important; height:100%; }
+    .big-check{ font-size:60px; color:#38d37c; margin-bottom:10px; }
+    .big-text{ font-size:28px; font-weight:700; }
+    .check-list{ list-style:none; padding-left:0; }
+    .check-list li{ font-size:1rem; font-weight:600; margin-bottom:6px; }
+    .check-list i{ color:#38d37c; margin-right:8px; }
+    .json-btn{ background:#2d2d2d; border:none; border-radius:8px; padding:10px 15px; color:#fff; font-weight:600; cursor:pointer; width:100%; }
+    .chart-container{ background:#1a1a1a; border-radius:12px; padding:18px; margin-bottom:20px; height:440px; }
+    .chart-container canvas{ height:100% !important; }
+    .bottom-nav .btn{ background:#1a1a1a; border:none; color:#fff !important; flex:1; margin:3px; font-size:1.05rem; font-weight:700; }
+    .active-btn{ background:#2d2d2d !important; }
+    .section-gap{ margin-top:15px; }
+    @media(max-width:768px){ .big-text{font-size:22px} .big-check{font-size:45px} .chart-container{height:360px} }
+    @media(max-width:576px){ .chart-container{height:300px} .json-btn{font-size:.9rem; padding:8px 12px} }
+  </style>
+</head>
+<body>
+
+<div class="container-fluid p-3">
+
+  <!-- Top Section -->
+  <div class="row">
+    <!-- Data Validated -->
+    <div class="col-md-4 d-flex">
+      <div class="card text-center w-100 d-flex align-items-center justify-content-center">
+        <i class="fas fa-check-circle big-check" id="statusIcon" aria-hidden="true"></i>
+        <div class="big-text" id="statusText">Data Validated</div>
+        <small class="text-muted" id="statusMeta"></small>
+      </div>
+    </div>
+
+    <!-- Comparison -->
+    <div class="col-md-4 d-flex">
+      <div class="card w-100">
+        <h6>Comparison</h6>
+        <ul class="check-list" id="comparisonList">
+          <li><i class="fas fa-check"></i>Dataset lengths match</li>
+          <li><i class="fas fa-check"></i>Label formats match</li>
+          <li><i class="fas fa-check"></i>AQI thresholds match</li>
+          <li><i class="fas fa-check"></i>Coordinates match</li>
+        </ul>
+        <hr class="border-secondary">
+        <div>
+          <div><b>RMSE:</b> <span id="rmse">—</span></div>
+          <div><b>MAE:</b> <span id="mae">—</span></div>
+          <div><b>Result:</b> <span id="result">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Provenance + Export -->
+    <div class="col-md-4 d-flex flex-column">
+      <div class="card mb-3">
+        <h6>Data Provenance</h6>
+        <p id="provenance">
+          = TEMPO<br><span id="tempoUpdate">Last updated —</span><br>
+          = OpenAQ<br>= Local Sensor
+        </p>
+      </div>
+      <div class="card d-flex align-items-center justify-content-center">
+        <button class="json-btn" id="exportBtn">JSON Export</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Section (Charts) -->
+  <div class="row section-gap">
+    <div class="col-md-6">
+      <div class="chart-container">
+        <h6>TEMPO vs Ground</h6>
+        <canvas id="tempoChart"></canvas>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="chart-container">
+        <h6>PM₂.₅ / O₃</h6>
+        <canvas id="pmChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <div class="d-flex bottom-nav mt-2" id="bottomNav">
+    <a class="btn nav-btn" href="forecast.html">Forecast</a>
+    <a class="btn nav-btn active-btn" href="validate.html">Validate</a>
+    <a class="btn nav-btn" href="map.html">Map</a>
+    <a class="btn nav-btn" href="history.html">History</a>
+  </div>
+</div>
+
+<script>
+/** ============ Config ============ **/
+const API_BASE = "http://localhost:8000"; // change if needed
+const VALIDATE_URL = API_BASE + "/api/validate";
+const FORECAST_URL = API_BASE + "/api/forecast"; // optional: for timestamps/status
+
+/** ============ Helpers ============ **/
+function downloadJSON(filename, dataObj) {
+  const blob = new Blob([JSON.stringify(dataObj, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 0);
+}
+
+function makeLineChart(ctx, labels, datasets) {
+  return new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: 'white' } } },
+      scales: {
+        x: { ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+        y: { ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } }
+      }
+    }
+  });
+}
+
+/** ============ Fallback demo series (if API doesn’t provide) ============ **/
+const FALLBACK = {
+  tempoVsGround: {
+    labels: ['12 PM','6 PM','12 AM','6 AM'],
+    tempo:  [25,35,50,65],
+    ground: [28,40,55,70]
+  },
+  pm_o3: {
+    labels: ['12 PM','6 PM','6 AM','12 PM'],
+    pm25: [14,13,15,15],
+    o3:   [22,21,25,26]
+  }
+};
+
+/** ============ Render ============ **/
+async function init() {
+  let validateData = null;
+  let forecastMeta = null;
+
+  // fetch validate metrics
+  try {
+    const r = await fetch(VALIDATE_URL);
+    validateData = await r.json();
+  } catch (e) {
+    console.error("validate fetch failed", e);
+    validateData = { result: "error", rmse: null, mae: null, error: String(e) };
+  }
+
+  // optional: fetch forecast meta (timestamp/status)
+  try {
+    const r2 = await fetch(FORECAST_URL);
+    forecastMeta = await r2.json();
+  } catch (e) {
+    forecastMeta = null;
+  }
+
+  // ---- Fill metrics/card ----
+  document.getElementById("rmse").textContent = (validateData && validateData.rmse != null) ? validateData.rmse : "—";
+  document.getElementById("mae").textContent  = (validateData && validateData.mae  != null) ? validateData.mae  : "—";
+  document.getElementById("result").textContent = (validateData && validateData.result) ? validateData.result : "—";
+
+  const statusText = document.getElementById("statusText");
+  const statusIcon = document.getElementById("statusIcon");
+  if (validateData && (validateData.result || "").toLowerCase() === "ok") {
+    statusText.textContent = "Data Validated";
+    statusIcon.classList.remove("fa-times-circle");
+    statusIcon.classList.add("fa-check-circle");
+    statusIcon.style.color = "#38d37c";
+  } else {
+    statusText.textContent = "Validation Issue";
+    statusIcon.classList.remove("fa-check-circle");
+    statusIcon.classList.add("fa-times-circle");
+    statusIcon.style.color = "#ff6b6b";
+  }
+
+  const tsMeta = (forecastMeta && forecastMeta.ts) ? forecastMeta.ts : new Date().toISOString();
+  document.getElementById("statusMeta").textContent = `as of ${tsMeta}`;
+  document.getElementById("tempoUpdate").textContent = `Last updated ${new Date(tsMeta).toLocaleTimeString()}`;
+
+  // ---- Build charts (use API series if present; else fallback) ----
+  // Expected (optional) API shape examples:
+  // validateData.series_tempo_ground = { labels: [...], tempo: [...], ground: [...] }
+  // validateData.series_pm_o3        = { labels: [...], pm25: [...], o3: [...] }
+
+  const tg = (validateData && validateData.series_tempo_ground) ? validateData.series_tempo_ground : FALLBACK.tempoVsGround;
+  const pm = (validateData && validateData.series_pm_o3) ? validateData.series_pm_o3 : FALLBACK.pm_o3;
+
+  const tempoCtx = document.getElementById('tempoChart').getContext('2d');
+  makeLineChart(tempoCtx, tg.labels, [
+    { label: 'TEMPO',  data: tg.tempo,  borderColor: 'rgb(190,190,190)', tension: 0.4 },
+    { label: 'Ground', data: tg.ground, borderColor: 'cyan',             tension: 0.4 }
+  ]);
+
+  const pmCtx = document.getElementById('pmChart').getContext('2d');
+  makeLineChart(pmCtx, pm.labels, [
+    { label: 'PM₂.₅', data: pm.pm25, borderColor: 'violet', tension: 0.4 },
+    { label: 'O₃',    data: pm.o3,   borderColor: 'cyan',   tension: 0.4 }
+  ]);
+
+  // ---- JSON Export ----
+  const exportBtn = document.getElementById("exportBtn");
+  exportBtn.onclick = () => {
+    downloadJSON("validate_payload.json", {
+      validate: validateData,
+      forecast_meta: forecastMeta
+    });
+  };
+
+  // ---- Bottom nav: make sure it works under / or /public/ ----
+  const nav = document.getElementById('bottomNav');
+  const pathLower = location.pathname.toLowerCase();
+  const underPublic = pathLower.includes('/public/');
+  const basePrefix = underPublic ? '/public/' : '/';
+  Array.from(nav.querySelectorAll('a.btn')).forEach(a => {
+    const href = a.getAttribute('href') || '';
+    a.setAttribute('href', (basePrefix + href).replace(/\/{2,}/g,'/'));
+  });
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+
+</body>
+</html>
