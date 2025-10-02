@@ -2,20 +2,30 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import annotations
-import argparse
+import os
 from dataclasses import dataclass
 from math import isfinite
 from pathlib import Path
-from typing import List, Optional, Tuple
-
+from typing import Tuple
+import numpy as np
+import pandas as pd
 import folium
 from folium.plugins import TimestampedGeoJson
 from sklearn.linear_model import LinearRegression
-import numpy as np
-import pandas as pd
+
+from config import get_config
 
 R = 8.31446261815324  # J/(mol*K)
 MW_NO2 = 46.0055      # g/mol
+
+_cfg = get_config()
+_W, _S, _E, _N = [float(x) for x in _cfg["BBOX_WSEN"].split(",")]
+
+def _clip_bbox(df, lat_col="lat_bin", lon_col="lon_bin"):
+    if df is None or df.empty:
+        return df
+    return df[(df[lat_col] >= _S) & (df[lat_col] <= _N) &
+              (df[lon_col] >= _W) & (df[lon_col] <= _E)].copy()
 
 def _to_datetime_utc(s: pd.Series) -> pd.Series:
     return pd.to_datetime(s, utc=True, errors="coerce")
@@ -30,12 +40,12 @@ def _normalize_cols(df: pd.DataFrame) -> pd.DataFrame:
     df.columns = [c.replace(" ", "_").replace(".", "_").lower() for c in df.columns]
     return df
 
-def _require(df: pd.DataFrame, cols: List[str], name: str):
+def _require(df: pd.DataFrame, cols, name: str):
     miss = [c for c in cols if c not in df.columns]
     if miss:
         raise ValueError(f"{name}: missing required columns: {miss}")
 
-def _first_nonnull(*series: Optional[pd.Series]) -> Optional[pd.Series]:
+def _first_nonnull(*series: pd.Series | None) -> pd.Series | None:
     out = None
     for s in series:
         if s is None: continue
@@ -45,21 +55,25 @@ def _first_nonnull(*series: Optional[pd.Series]) -> Optional[pd.Series]:
             out.loc[m] = s[m]
     return out
 
-# -------------- Unit normalization --------------
 def unit_to_normalized_string(u: str) -> str:
     if u is None: return ""
     s = str(u).strip().lower()
+    # Unicode and spacing
     s = (s.replace("µ","u")
            .replace("μ","u")
            .replace("³","3")
+           .replace("m³","m3")
            .replace("per","/")
            .replace(" ", ""))
+    # common variants
     s = s.replace("ug/m^3", "ug/m3").replace("ug/m³","ug/m3").replace("u g/m3","ug/m3")
     s = s.replace("microgram/m3","ug/m3").replace("micrograms/m3","ug/m3")
+    s = s.replace("ppm(v)","ppm").replace("ppbv","ppb").replace("ppb(v)","ppb")
     s = s.replace("partspermillion","ppm").replace("partsperbillion","ppb")
     return s
 
-def no2_to_ugm3(value: float, unit: str, temp_k: float, pressure_pa: float) -> Optional[float]:
+
+def no2_to_ugm3(value: float, unit: str, temp_k: float, pressure_pa: float) -> float | None:
     if value is None or not isfinite(value): return None
     u = unit_to_normalized_string(unit)
     if u in ("ug/m3", "µg/m3", "ugm3"): return float(value)
@@ -69,7 +83,6 @@ def no2_to_ugm3(value: float, unit: str, temp_k: float, pressure_pa: float) -> O
         ppb = float(value) if u == "ppb" else float(value) * 1000.0
         ugm3 = ppb * MW_NO2 * pressure_pa / (R * temp_k) * 1e-3
         return float(ugm3)
-    # Some stations ship "mg/m3" or "ng/m3"
     if u == "mg/m3": return float(value) * 1000.0
     if u == "ng/m3": return float(value) * 1e-3
     return None
@@ -79,15 +92,22 @@ class FuseValidateMerge:
     tempo_csv: str
     openaq_csv: str
     weather_csv: str
-    grid_step: float = 0.25
+    grid_step: float = 0.5
     out_fused_csv: str = "./out/fused_truth_dataset.csv"
     out_metrics_csv: str = "./out/fused_metrics.csv"
     out_map_html: str = "./out/fused_map.html"
     out_multihour_map_html: str = "./out/fused_multihour_map.html"
-    multihour_panels: int = 6  # number of most recent hours to panelize
+    multihour_panels: int = 6
 
     # ---------- TEMPO ----------
     def _load_tempo(self) -> pd.DataFrame:
+        # Robust: handle missing/blank path
+        if not self.tempo_csv or not os.path.isfile(self.tempo_csv):
+            return pd.DataFrame(columns=[
+                "time_hour","lat_bin","lon_bin",
+                "no2_trop_col_molec_cm2","tempo_n_pix","tempo_pix_std","tempo_qc_note"
+            ])
+
         df = pd.read_csv(self.tempo_csv)
         df = _normalize_cols(df)
 
@@ -95,7 +115,10 @@ class FuseValidateMerge:
         if "time" not in df.columns:
             tcol = [c for c in df.columns if c.startswith("time") or c.startswith("date")]
             if not tcol:
-                raise ValueError("TEMPO: cannot find time column")
+                return pd.DataFrame(columns=[
+                    "time_hour","lat_bin","lon_bin",
+                    "no2_trop_col_molec_cm2","tempo_n_pix","tempo_pix_std","tempo_qc_note"
+                ])
             df["time"] = df[tcol[0]]
         df["time"] = _to_datetime_utc(df["time"])
         df["time_hour"] = _floor_hour(df["time"])
@@ -104,24 +127,26 @@ class FuseValidateMerge:
         latc = next((c for c in ("latitude", "lat") if c in df.columns), None)
         lonc = next((c for c in ("longitude", "lon", "lng") if c in df.columns), None)
         if not latc or not lonc:
-            raise ValueError("TEMPO: cannot find latitude/longitude")
+            return pd.DataFrame(columns=[
+                "time_hour","lat_bin","lon_bin",
+                "no2_trop_col_molec_cm2","tempo_n_pix","tempo_pix_std","tempo_qc_note"
+            ])
         df["lat"] = pd.to_numeric(df[latc], errors="coerce")
         df["lon"] = pd.to_numeric(df[lonc], errors="coerce")
 
-        # NO2 column + per-cell uncertainty (std) if available
+        # NO2 column
         n2cands = [c for c in df.columns if ("no2" in c and "column" in c)]
         if not n2cands:
             n2cands = [c for c in df.columns if ("vertical" in c and "tropos" in c)]
         if not n2cands:
-            raise ValueError("TEMPO: cannot find NO2 column field")
+            return pd.DataFrame(columns=[
+                "time_hour","lat_bin","lon_bin",
+                "no2_trop_col_molec_cm2","tempo_n_pix","tempo_pix_std","tempo_qc_note"
+            ])
         vcol = n2cands[0]
         df["no2_trop_col_molec_cm2"] = pd.to_numeric(df[vcol], errors="coerce")
-        # optional per-pixel uncertainty columns (best-effort)
         ucol = next((c for c in df.columns if ("uncert" in c and "no2" in c) or ("sigma" in c and "no2" in c)), None)
-        if ucol:
-            df["tempo_pixel_sigma"] = pd.to_numeric(df[ucol], errors="coerce")
-        else:
-            df["tempo_pixel_sigma"] = np.nan
+        df["tempo_pixel_sigma"] = pd.to_numeric(df[ucol], errors="coerce") if ucol else np.nan
 
         df = df[np.isfinite(df["no2_trop_col_molec_cm2"])]
         df = df[df["no2_trop_col_molec_cm2"] >= 0]
@@ -130,7 +155,6 @@ class FuseValidateMerge:
         df["lat_bin"] = _snap_to_grid(df["lat"], self.grid_step)
         df["lon_bin"] = _snap_to_grid(df["lon"], self.grid_step)
 
-        # Aggregate → mean + std + N
         tempo = (
             df.groupby(["time_hour","lat_bin","lon_bin"])
               .agg(no2_trop_col_molec_cm2=("no2_trop_col_molec_cm2","mean"),
@@ -201,7 +225,6 @@ class FuseValidateMerge:
         df["lat_bin"] = _snap_to_grid(df["lat"], self.grid_step)
         df["lon_bin"] = _snap_to_grid(df["lon"], self.grid_step)
 
-        # sensor-level aggregation (mean + std + n)
         by_cell = (
             df.groupby(["time_hour","lat_bin","lon_bin"])
               .agg(
@@ -215,7 +238,6 @@ class FuseValidateMerge:
         by_cell["openaq_std"] = by_cell["openaq_std"].fillna(0.0)
         return by_cell
 
-    # ---------- Convert ground to ug/m3 using weather ----------
     def _enrich_openaq_with_weather(self, openaq: pd.DataFrame, weather: pd.DataFrame) -> pd.DataFrame:
         w = weather.copy()
         if "temp_k" not in w.columns and "temperature_2m" in w.columns:
@@ -233,7 +255,6 @@ class FuseValidateMerge:
             axis=1,
         )
         m["openaq_qc_note"] = np.where(m["no2_ground_ug_m3"].isna(), "unit_or_env_missing","")
-        # Propagate uncertainty (SE of mean): std / sqrt(n)
         m["openaq_se"] = m.apply(
             lambda r: (r["openaq_std"]/max(1, np.sqrt(r["openaq_n_obs"]))) if isfinite(r["openaq_std"]) else np.nan, axis=1
         )
@@ -244,6 +265,11 @@ class FuseValidateMerge:
         tempo = self._load_tempo()
         weather = self._load_weather()
         openaq = self._load_openaq()
+
+        tempo   = _clip_bbox(tempo,   "lat_bin","lon_bin")
+        weather = _clip_bbox(weather, "lat_bin","lon_bin")
+        openaq  = _clip_bbox(openaq,  "lat_bin","lon_bin")
+
         openaq_conv = self._enrich_openaq_with_weather(openaq, weather)
 
         fused = (weather
@@ -258,7 +284,6 @@ class FuseValidateMerge:
             )
         )
 
-        # Bias correction (OLS)
         mask = fused["no2_trop_col_molec_cm2"].notna() & fused["no2_ground_ug_m3"].notna()
         if mask.sum() >= 5:
             X = fused.loc[mask, ["no2_trop_col_molec_cm2"]].values
@@ -276,13 +301,11 @@ class FuseValidateMerge:
             fused["bias_model_intercept"] = np.nan
             print("⚠️ Not enough overlap for bias correction")
 
-        # QC flags
         fused["fused_qc_note"] = np.where(
             fused["no2_trop_col_molec_cm2"].isna() & fused["no2_ground_ug_m3"].isna(),
             "no_no2_observed_in_cell_hour",""
         )
 
-        # Order
         front = [
             "time_hour","lat_bin","lon_bin",
             "no2_trop_col_molec_cm2","tempo_pix_std","no2_trop_col_corrected_ug_m3",
@@ -293,12 +316,22 @@ class FuseValidateMerge:
         weather_cols = [c for c in weather.columns if c not in ("time_hour","lat_bin","lon_bin")]
         ordered = front + [c for c in weather_cols if c not in front]
         fused = fused.reindex(columns=[c for c in ordered if c in fused.columns]).sort_values(["time_hour","lat_bin","lon_bin"])
+
         Path(self.out_fused_csv).parent.mkdir(parents=True, exist_ok=True)
         fused.to_csv(self.out_fused_csv, index=False)
         print(f"✅ Fused dataset saved: {self.out_fused_csv}  rows={len(fused):,}")
+
+        fused["has_tempo"]   = fused["no2_trop_col_molec_cm2"].notna()
+        fused["has_ground"]  = fused["no2_ground_ug_m3"].notna()
+        fused["has_weather"] = fused["temp_k"].notna() & fused["pressure_pa"].notna()
+
+        fused_qc = fused[(fused["has_weather"]) & (fused["has_tempo"] | fused["has_ground"])].copy()
+        qc_path = self.out_fused_csv.replace(".csv", "_qc.csv")
+        fused_qc.to_csv(qc_path, index=False)
+        print(f"✅ Fused (QC) saved: {qc_path}  rows={len(fused_qc):,}")
+
         return fused
 
-    # ---------- Weighted metrics ----------
     def compute_metrics(self, fused: pd.DataFrame) -> pd.DataFrame:
         df = fused.copy()
         mask = df["no2_trop_col_molec_cm2"].notna() & df["no2_ground_ug_m3"].notna()
@@ -331,7 +364,6 @@ class FuseValidateMerge:
         print(f"✅ Metrics saved: {self.out_metrics_csv}  rows={len(metrics):,}")
         return metrics
 
-    # ---------- Single-hour map ----------
     def export_map(self, fused: pd.DataFrame):
         if fused.empty:
             print("⚠️ Empty fused dataset; map skipped."); return
@@ -339,8 +371,13 @@ class FuseValidateMerge:
         sub = fused[fused["time_hour"] == last_time].copy()
         if sub.empty:
             print("⚠️ No rows for latest hour; map skipped."); return
-        center_lat = float(sub["lat_bin"].mean()); center_lon = float(sub["lon_bin"].mean())
-        fmap = folium.Map(location=[center_lat, center_lon], zoom_start=8, control_scale=True)
+
+        sub = sub[(sub["lat_bin"] >= _S) & (sub["lat_bin"] <= _N) &
+                  (sub["lon_bin"] >= _W) & (sub["lon_bin"] <= _E)].copy()
+        center_lat = (_S + _N)/2.0
+        center_lon = (_W + _E)/2.0
+        fmap = folium.Map(location=[center_lat, center_lon], zoom_start=6, control_scale=True)
+        fmap.fit_bounds([[_S, _W], [_N, _E]])
 
         tempo_layer = folium.FeatureGroup(name="TEMPO NO₂ (column)")
         for _, r in sub.iterrows():
@@ -373,16 +410,23 @@ class FuseValidateMerge:
         fmap.save(self.out_map_html)
         print(f"✅ Interactive map saved: {self.out_map_html}")
 
-    # ---------- Multi-hour panels (Time slider) ----------
     def export_multihour_map(self, fused: pd.DataFrame):
-        if fused.empty: print("⚠️ Empty fused dataset; multi-hour map skipped."); return
+        if fused.empty:
+            print("⚠️ Empty fused dataset; multi-hour map skipped.");
+            return
         times = sorted(fused["time_hour"].dropna().unique())[-self.multihour_panels:]
-        if not times: print("⚠️ No time slices for multi-hour map."); return
+        if not times:
+            print("⚠️ No time slices for multi-hour map.");
+            return
         sub = fused[fused["time_hour"].isin(times)].copy()
-        center_lat = float(sub["lat_bin"].mean()); center_lon = float(sub["lon_bin"].mean())
-        fmap = folium.Map(location=[center_lat, center_lon], zoom_start=7, control_scale=True)
 
-        # Build a simple GeoJSON time series (ground NO2)
+        sub = sub[(sub["lat_bin"] >= _S) & (sub["lat_bin"] <= _N) &
+                  (sub["lon_bin"] >= _W) & (sub["lon_bin"] <= _E)].copy()
+        center_lat = (_S + _N)/2.0
+        center_lon = (_W + _E)/2.0
+        fmap = folium.Map(location=[center_lat, center_lon], zoom_start=6, control_scale=True)
+        fmap.fit_bounds([[_S, _W], [_N, _E]])
+
         features = []
         for t in times:
             g = sub[(sub["time_hour"] == t) & sub["no2_ground_ug_m3"].notna()]
@@ -406,35 +450,9 @@ class FuseValidateMerge:
         fmap.save(self.out_multihour_map_html)
         print(f"✅ Multi-hour map saved: {self.out_multihour_map_html}")
 
-    # ---------- Orchestrate ----------
     def run(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
         fused = self.fuse()
         metrics = self.compute_metrics(fused)
         self.export_map(fused)
         self.export_multihour_map(fused)
         return fused, metrics
-
-# ------------- CLI -------------
-def _parse_args():
-    ap = argparse.ArgumentParser(description="Fuse TEMPO + OpenAQ + Weather with uncertainties & multi-hour panels.")
-    ap.add_argument("--tempo", required=True, help="Path to TEMPO CSV")
-    ap.add_argument("--openaq", required=True, help="Path to OpenAQ CSV")
-    ap.add_argument("--weather", required=True, help="Path to Open-Meteo CSV")
-    ap.add_argument("--grid-step", type=float, default=0.25)
-    ap.add_argument("-o", "--out", required=True, dest="out_fused")
-    ap.add_argument("--metrics", required=True, dest="out_metrics")
-    ap.add_argument("--map", required=True, dest="out_map")
-    ap.add_argument("--multimap", required=True, dest="out_multimap")
-    return ap.parse_args()
-
-def main():
-    args = _parse_args()
-    runner = FuseValidateMerge(
-        tempo_csv=args.tempo, openaq_csv=args.openaq, weather_csv=args.weather,
-        grid_step=args.grid_step, out_fused_csv=args.out_fused, out_metrics_csv=args.out_metrics,
-        out_map_html=args.map, out_multihour_map_html=args.out_multimap
-    )
-    runner.run()
-
-if __name__ == "__main__":
-    main()
