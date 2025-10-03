@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AQI Dashboard</title>
 
-  <!-- Bootstrap -->
+  <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -13,46 +13,148 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
 
   <style>
-    body { background-color:#111; color:#fff !important; font-family:'Segoe UI', sans-serif; }
-    .nav-buttons .btn { background:#1b1b1b; border:none; color:#fff !important; margin:5px; font-size:1rem; font-weight:700; }
-    .card { background:#1a1a1a; border:none; border-radius:12px; padding:18px; margin-bottom:20px; color:#fff !important; }
-    .aqi-box { text-align:center; }
-    .aqi-value { font-size:54px; font-weight:bold; color:#38d37c; }
-    .card h5,.card h6,.card p { font-size:1.1rem; font-weight:700; color:#fff !important; }
-    .toggle-switch { display:flex; justify-content:space-between; align-items:center; }
-    .test-list li { list-style:none; margin-bottom:6px; font-size:1rem; font-weight:700; color:#fff !important; }
-    .test-list i { color:#38d37c; margin-right:8px; }
+    :root{
+      --bg:#111;
+      --text:#fff;
+      --card:#1a1a1a;
+      --nav:#1b1b1b;
+      --muted:#fff;
+      --border:#333;
+      --pill:#222;
+      --pill-active:#2d2d2d;
+      --accent:#38d37c;
+    }
+    /* Light theme overrides */
+    body.light{
+      --bg:#ffffff;
+      --text:#111111;
+      --card:#f5f5f7;
+      --nav:#ececf0;
+      --muted:#222222;
+      --border:#d8d8df;
+      --pill:#efeff3;
+      --pill-active:#e2e2e9;
+      --accent:#1aa366;
+    }
+
+    body{
+      background-color:var(--bg);
+      color:var(--text) !important;
+      font-family:'Segoe UI', sans-serif;
+    }
+
+    .nav-buttons .btn{
+      background:var(--nav);
+      border:1px solid var(--border);
+      color:var(--text) !important;
+      margin:5px;
+      font-size:1rem;
+      font-weight:700;
+    }
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:18px;
+      margin-bottom:20px;
+      color:var(--text) !important;
+    }
+
+    .aqi-box{ text-align:center; }
+    .aqi-value{ font-size:54px; font-weight:bold; color:var(--accent); }
+
+    .card h5,.card h6,.card p,
+    .test-list li, small { color:var(--text) !important; }
+
+    .test-list li{
+      list-style:none;
+      margin-bottom:6px;
+      font-size:1rem;
+      font-weight:700;
+    }
+    .test-list i{ color:var(--accent); margin-right:8px; }
 
     /* Forecast Chart */
-    .forecast-chart-wrapper { display:flex; justify-content:center; align-items:center; width:100%; height:55vh; }
-    .forecast-chart-wrapper canvas { width:90% !important; max-width:90% !important; height:100% !important; max-height:100% !important; }
+    .forecast-chart-wrapper{
+      display:flex; justify-content:center; align-items:center;
+      width:100%; height:55vh;
+    }
+    .forecast-chart-wrapper canvas{
+      width:90% !important; max-width:90% !important;
+      height:100% !important; max-height:100% !important;
+    }
 
-    .bottom-nav .btn { background:#1a1a1a; border:none; color:#fff !important; flex:1; margin:3px; font-size:1.05rem; font-weight:700; }
-    .active-btn { background:#2d2d2d !important; }
-    small { color:#fff !important; }
+    .bottom-nav .btn{
+      background:var(--card);
+      border:1px solid var(--border);
+      color:var(--text) !important;
+      flex:1; margin:3px; font-size:1.05rem; font-weight:700;
+    }
+    .active-btn{ background:var(--pill-active) !important; }
 
-    .equal-row { display:flex; flex-wrap:wrap; align-items:stretch; }
-    .equal-row > div { display:flex; }
-    .equal-row .card { flex:1; }
+    .equal-row{ display:flex; flex-wrap:wrap; align-items:stretch; }
+    .equal-row > div{ display:flex; }
+    .equal-row .card{ flex:1; }
 
-    .forecast-row { display:flex; flex-wrap:wrap; align-items:stretch; }
-    .forecast-row > div { display:flex; flex-direction:column; }
-    .forecast-row .card { flex:1; }
+    .forecast-row{ display:flex; flex-wrap:wrap; align-items:stretch; }
+    .forecast-row > div{ display:flex; flex-direction:column; }
+    .forecast-row .card{ flex:1; }
 
-    .scope-pill { background:#222; border:1px solid #333; border-radius:999px; padding:6px 12px; margin:5px; color:#fff; font-weight:700; cursor:pointer; }
-    .scope-pill.active { background:#2d2d2d; }
-    .dim { opacity:.85; font-weight:600; }
+    .scope-pill{
+      background:var(--pill);
+      border:1px solid var(--border);
+      border-radius:999px; padding:6px 12px; margin:5px;
+      color:var(--text); font-weight:700; cursor:pointer;
+      user-select:none;
+    }
+    .scope-pill.active{ background:var(--pill-active); }
+
+    .dim{ opacity:.85; font-weight:600; }
+    .btn-ghost{
+      background:var(--pill);
+      border:1px solid var(--border);
+      color:var(--text); font-weight:700;
+    }
+    .modal-content{ background:var(--card); color:var(--text); border:1px solid var(--border); }
+    .modal-header{ border-bottom:1px solid var(--border); }
+    .modal-footer{ border-top:1px solid var(--border); }
+    .form-control{ background:var(--bg); border:1px solid var(--border); color:var(--text); }
+    .form-control::placeholder{ color:#888; }
+
+    /* Threshold (fixed) */
+    .threshold-title{ text-align:center; font-size:1.6rem; font-weight:800; margin-top:10px; margin-bottom:6px; }
+    .threshold-value{ text-align:center; line-height:1; margin-bottom:6px; }
+
+    /* Top bar */
+    .topbar{
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+    }
+    .theme-toggle{
+      border:1px solid var(--border);
+      background:var(--pill);
+      color:var(--text);
+      border-radius:999px; padding:8px 12px; font-weight:700;
+    }
+    .theme-toggle i{ margin-right:6px; }
+    a.nav-link-btn{ display:block; width:100%; color:var(--text); text-decoration:none; text-transform:none; }
   </style>
 </head>
 <body>
 
 <div class="container-fluid p-3">
 
-  <!-- Top Navigation (scopes) -->
-  <div class="d-flex flex-wrap nav-buttons mb-3" id="scopeBar">
-    <span class="scope-pill active" data-region="north_america" data-city="los_angeles">North America · Los Angeles</span>
-    <span class="scope-pill" data-region="north_america" data-city="san_francisco">North America · San Francisco</span>
-    <span class="scope-pill" data-region="north_america" data-city="new_york">North America · New York</span>
+  <!-- Top bar: scopes + theme toggle -->
+  <div class="topbar mb-2">
+    <div class="d-flex flex-wrap nav-buttons" id="scopeBar">
+      <span class="scope-pill active" data-region="north_america" data-city="california">North America · California</span>
+      <span class="scope-pill" data-region="north_america" data-city="san_francisco">North America · San Francisco</span>
+      <span class="scope-pill" data-region="north_america" data-city="new_york">North America · New York</span>
+    </div>
+
+    <button id="themeToggle" class="theme-toggle" type="button" title="Toggle theme">
+      <i class="fa-solid fa-circle-half-stroke"></i> <span id="themeLabel">Light</span>
+    </button>
   </div>
 
   <!-- First Row (equal height) -->
@@ -60,25 +162,26 @@
     <!-- AQI -->
     <div class="col-md-3 d-flex">
       <div class="card aqi-box w-100">
-        <h5 id="scopeLabel">AQI — North America / Los Angeles</h5>
+        <h5 id="scopeLabel">AQI — North America / California</h5>
         <div class="aqi-value" id="aqiValue">—</div>
         <p id="aqiBand">Loading…</p>
         <small class="dim" id="aqiTs">—</small>
       </div>
     </div>
 
-    <!-- Alerts -->
+    <!-- Alerts (Get Alert only, fixed threshold) -->
     <div class="col-md-3 d-flex">
       <div class="card w-100">
-        <div class="toggle-switch">
-          <h6>Proactive Alerts</h6>
-          <div class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" id="alertToggle" checked>
-          </div>
+        <div class="d-flex justify-content-between align-items-center">
+          <h6 class="mb-0">Alerts</h6>
+          <button type="button" class="btn btn-ghost btn-sm" data-bs-toggle="modal" data-bs-target="#getAlertModal">
+            <i class="fa-solid fa-bell"></i> Get Alert
+          </button>
         </div>
-        <p class="mt-2">AQI Threshold</p>
-        <input type="range" class="form-range" min="0" max="150" value="80" id="alertRange">
-        <small class="dim">Notify if AQI ≥ <span id="alertVal">80</span></small>
+
+        <div class="threshold-title">AQI Threshold</div>
+        <div class="threshold-value aqi-value" id="thresholdDisplay">53</div>
+        <small class="dim d-block text-center">Notify if AQI ≥ <span id="alertVal">53</span></small>
       </div>
     </div>
 
@@ -141,22 +244,77 @@
 
   <!-- Bottom Nav -->
   <div class="d-flex bottom-nav mt-2" id="bottomNav">
-    <button class="btn nav-btn active-btn"><a href="/index.html"   style="display:block;width:100%;color:white;text-decoration:none;text-transform:none;">Forecast</a></button>
-    <button class="btn nav-btn"><a href="/validate.html" style="display:block;width:100%;color:white;text-decoration:none;text-transform:none;">Validate</a></button>
-    <button class="btn nav-btn"><a href="/map.html"      style="display:block;width:100%;color:white;text-decoration:none;text-transform:none;">Map</a></button>
-    <button class="btn nav-btn"><a href="/history.html"  style="display:block;width:100%;color:white;text-decoration:none;text-transform:none;">History</a></button>
+    <button class="btn nav-btn active-btn"><a class="nav-link-btn" href="/index.html">Forecast</a></button>
+    <button class="btn nav-btn"><a class="nav-link-btn" href="/validate.html">Validate</a></button>
+    <button class="btn nav-btn"><a class="nav-link-btn" href="/map.html">Map</a></button>
+    <button class="btn nav-btn"><a class="nav-link-btn" href="/history.html">History</a></button>
   </div>
+</div>
 
+<!-- Get Alert Modal -->
+<div class="modal fade" id="getAlertModal" tabindex="-1" aria-labelledby="getAlertModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" id="subscribeForm">
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="getAlertModalLabel">Get Alert</h1>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        <p class="mb-3">Subscribe to get air-quality alerts.</p>
+
+        <div class="mb-3">
+          <label for="subEmail" class="form-label">Email</label>
+          <input type="email" class="form-control" id="subEmail" placeholder="you@example.com" required>
+        </div>
+
+        <div class="mb-3">
+          <label for="subLocation" class="form-label">Location</label>
+          <input type="text" class="form-control" id="subLocation" placeholder="California or 36.77,-119.41" required>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Close</button>
+        <button type="submit" class="btn btn-light" id="subscribeBtn">Subscribe</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
 const API_BASE = "http://localhost:8000";
+const DEFAULT_THRESHOLD = 53; // fixed threshold
+
+/* ---------- Theme handling ---------- */
+function applyTheme(mode){
+  const body = document.body;
+  if(mode === 'light'){ body.classList.add('light'); }
+  else { body.classList.remove('light'); }
+  localStorage.setItem('aqi_theme', mode);
+  document.getElementById('themeLabel').textContent = (mode === 'light') ? 'Dark' : 'Light';
+  // Refresh chart colors for readability
+  if(window.chartInstance){
+    const textColor = getComputedStyle(document.body).getPropertyValue('--text').trim() || '#111';
+    chartInstance.options.plugins.legend.labels.color = textColor;
+    chartInstance.options.scales.x.ticks.color = textColor;
+    chartInstance.options.scales.y.ticks.color = textColor;
+    chartInstance.update();
+  }
+}
+
+function toggleTheme(){
+  const current = localStorage.getItem('aqi_theme') || 'dark';
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+}
 
 /* ---------- AQI label helper ---------- */
 function aqiBandLabel(aqi){
   if (aqi==null || isNaN(aqi)) return {label:"Unknown", color:"#999"};
-  if (aqi<=50)  return {label:"Good", color:"#38d37c"};
+  if (aqi<=50)  return {label:"Good", color:getComputedStyle(document.body).getPropertyValue('--accent').trim() || "#38d37c"};
   if (aqi<=100) return {label:"Moderate", color:"#ffd166"};
   if (aqi<=150) return {label:"Unhealthy (SG)", color:"#fdae61"};
   if (aqi<=200) return {label:"Unhealthy", color:"#f46d43"};
@@ -169,19 +327,25 @@ let chartInstance=null;
 function renderChart(labels, series){
   const ctx = document.getElementById('forecastChart').getContext('2d');
   if(chartInstance) chartInstance.destroy();
+
+  const textColor = getComputedStyle(document.body).getPropertyValue('--text').trim() || '#ffffff';
+
   chartInstance = new Chart(ctx, {
     type:'line',
-    data:{ labels, datasets:[
-      { label:'NO₂',   data:series.no2,  borderColor:'yellow', tension:0.35 },
-      { label:'PM₂.₅', data:series.pm25, borderColor:'violet', tension:0.35 },
-      { label:'O₃',    data:series.o3,   borderColor:'cyan',   tension:0.35 },
-    ]},
+    data:{
+      labels,
+      datasets:[
+        { label:'NO₂',   data:series.no2,  borderColor:'yellow', tension:0.35 },
+        { label:'PM₂.₅', data:series.pm25, borderColor:'violet', tension:0.35 },
+        { label:'O₃',    data:series.o3,   borderColor:'cyan',   tension:0.35 },
+      ]
+    },
     options:{
       responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ labels:{ color:'white', font:{ size:14, weight:'bold' } } } },
+      plugins:{ legend:{ labels:{ color:textColor, font:{ size:14, weight:'bold' } } } },
       scales:{
-        x:{ ticks:{ color:'white', font:{ size:13, weight:'bold' } } },
-        y:{ ticks:{ color:'white', font:{ size:13, weight:'bold' } } }
+        x:{ ticks:{ color:textColor, font:{ size:13, weight:'bold' } } },
+        y:{ ticks:{ color:textColor, font:{ size:13, weight:'bold' } } }
       }
     }
   });
@@ -205,14 +369,19 @@ async function getForecast(region, city){
       region, city,
       aqi: 62, status:"Moderate", wind: 3.8, temp_c: 23.1,
       ts: new Date().toISOString(),
-      series: { labels, no2:[88,92,110,105,95,90,85], pm25:[55,58,60,63,62,61,60], o3:[48,52,57,60,58,55,53] },
+      series: {
+        labels,
+        no2:[88,92,110,105,95,90,85],
+        pm25:[55,58,60,63,62,61,60],
+        o3:[48,52,57,60,58,55,53]
+      },
       provenance: { tempo:true, openaq:true, weather:true }
     };
   }
 }
 
 /* ---------- Load data to UI ---------- */
-async function loadAndRender(region="north_america", city="los_angeles"){
+async function loadAndRender(region="north_america", city="california"){
   const data = await getForecast(region, city);
 
   // AQI card
@@ -224,9 +393,9 @@ async function loadAndRender(region="north_america", city="los_angeles"){
   bandEl.style.color = band.color;
   document.getElementById('aqiTs').textContent = data.ts ? new Date(data.ts).toLocaleString() : '—';
 
-  // Wind + Temp
-  document.getElementById('windVal').textContent = (data.wind ?? '—');
-  document.getElementById('tempVal').textContent = (data.temp_c ?? '—');
+  // Wind/Temp quick fill if provided (fallback demo values otherwise)
+  document.getElementById('windVal').textContent = (data.wind ?? 3.8);
+  document.getElementById('tempVal').textContent = (data.temp_c ?? 23.1);
 
   // Provenance
   document.getElementById('provTs').textContent = `Last updated ${data.ts ? new Date(data.ts).toLocaleTimeString() : '—'}`;
@@ -253,19 +422,51 @@ function wireScopes(){
   });
 }
 
-/* ---------- Alert slider label ---------- */
-(function(){
-  const r = document.getElementById('alertRange');
-  const out = document.getElementById('alertVal');
-  r.addEventListener('input', ()=> out.textContent = r.value);
+/* ---------- Init fixed threshold text ---------- */
+(function initThreshold(){
+  document.getElementById('thresholdDisplay').textContent = String(DEFAULT_THRESHOLD);
+  document.getElementById('alertVal').textContent = String(DEFAULT_THRESHOLD);
 })();
+
+/* ---------- Subscribe form handler ---------- */
+document.addEventListener('DOMContentLoaded', ()=>{
+  const form = document.getElementById('subscribeForm');
+  form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const email = document.getElementById('subEmail').value.trim();
+    const location = document.getElementById('subLocation').value.trim();
+    const threshold = DEFAULT_THRESHOLD;
+
+    if(!email || !location){
+      alert('Please enter both email and location.');
+      return;
+    }
+
+    // TODO: replace with your real API endpoint
+    // await fetch(`${API_BASE}/api/subscribe`, {
+    //   method:'POST',
+    //   headers:{'Content-Type':'application/json'},
+    //   body: JSON.stringify({ email, location, threshold })
+    // });
+
+    alert(`Subscribed!\nEmail: ${email}\nLocation: ${location}\nAQI ≥ ${threshold}`);
+    const modalEl = document.getElementById('getAlertModal');
+    const modal = bootstrap.Modal.getInstance(modalEl);
+    modal.hide();
+    form.reset();
+  });
+});
 
 /* ---------- Boot ---------- */
 document.addEventListener('DOMContentLoaded', async ()=>{
+  // Theme: load stored preference (default dark)
+  const saved = localStorage.getItem('aqi_theme') || 'dark';
+  applyTheme(saved);
+  document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
   wireScopes();
-  await loadAndRender("north_america","los_angeles");
+  await loadAndRender("north_america","california");
 });
 </script>
-
 </body>
 </html>
