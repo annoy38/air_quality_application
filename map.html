@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
@@ -11,78 +11,147 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 <style>
-  body{background:#111;color:#fff;font-family:'Segoe UI',system-ui,-apple-system,Roboto,sans-serif;margin:0}
-  .container-wide{max-width:1200px;margin:0 auto;padding:16px}
-  #map{height:78vh;border-radius:12px}
-  .legend{background:#1a1a1a;color:#fff;padding:8px 10px;border-radius:8px;line-height:1.1;border:1px solid #333}
-  .legend i{width:12px;height:12px;display:inline-block;margin-right:6px;border-radius:2px;border:1px solid rgba(255,255,255,.25)}
-  .leaflet-control-attribution{background:rgba(0,0,0,.5)!important;color:#ddd}
-  .scope-pill{background:#222;border:1px solid #333;border-radius:999px;padding:6px 12px;margin:5px;color:#fff;font-weight:700;cursor:pointer;display:inline-block}
-  .scope-pill.active{background:#2d2d2d}
-  .dim{opacity:.85}
+  :root{
+    --bg:#111;
+    --text:#fff;
+    --card:#1a1a1a;
+    --border:#333;
+    --pill:#222;
+    --pill-active:#2d2d2d;
+    --muted: color-mix(in srgb, var(--text) 55%, transparent);
+    --legend-bg:#1a1a1a;
+    --legend-grid:#333;
+  }
+  body.light{
+    --bg:#ffffff;
+    --text:#111111;     /* light = black text */
+    --card:#f5f5f7;
+    --border:#d8d8df;
+    --pill:#efeff3;
+    --pill-active:#e2e2e9;
+    --muted: color-mix(in srgb, var(--text) 45%, transparent);
+    --legend-bg:#ffffff;
+    --legend-grid:#d8d8df;
+  }
 
-  /* Fixed Bottom Nav (same across pages) */
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:'Segoe UI',system-ui,-apple-system,Roboto,sans-serif;
+    margin:0;
+  }
+
+  .container-fluid{ padding:16px; }
+
+  /* Top bar & pills */
+  .topbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+  .scope-pill{
+    background:var(--pill); border:1px solid var(--border);
+    border-radius:999px; padding:6px 12px; margin:5px 6px 5px 0;
+    color:var(--text); font-weight:700; cursor:pointer; user-select:none; display:inline-block;
+  }
+  .scope-pill.active{ background:var(--pill-active); }
+
+  .theme-toggle{
+    border:1px solid var(--border); background:var(--pill); color:var(--text);
+    border-radius:999px; padding:8px 12px; font-weight:700;
+  }
+  .theme-toggle i{ margin-right:6px; }
+
+  .dim{ color:var(--muted) !important; }
+
+  /* Map card takes the whole page height (minus header + bottom nav) */
+  .map-card{
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:14px; height: calc(100vh - 160px);  /* header+nav offsets */
+    display:flex; flex-direction:column;
+  }
+  #map{
+    flex:1 1 auto; min-height: 300px;
+    border-radius:10px; border:1px solid var(--border); background:var(--card);
+  }
+
+  /* Legend styled like Validate cards */
+  .legend{
+    background:var(--legend-bg); color:var(--text);
+    padding:8px 10px; border-radius:8px; line-height:1.1; border:1px solid var(--legend-grid);
+    box-shadow: 0 4px 16px rgba(0,0,0,.18);
+  }
+  .legend i{width:12px;height:12px;display:inline-block;margin-right:6px;border-radius:2px;border:1px solid rgba(0,0,0,.2)}
+
+  /* Leaflet attribution contrast */
+  .leaflet-control-attribution{background:rgba(0,0,0,.35)!important;color:#ddd}
+  body.light .leaflet-control-attribution{background:rgba(255,255,255,.7)!important;color:#333}
+
+  /* Bottom Nav (same look as Validate) */
   .bottom-nav{
-    position: fixed; left: 0; right: 0; bottom: 12px;
-    z-index: 1000; display: flex; gap: 10px; padding: 0 16px;
-    pointer-events: none;
+    display:flex; gap:10px; margin-top:12px;
   }
   .bottom-nav .btn{
-    flex: 1; margin: 0; background:#1a1a1a; border:none; color:#fff!important;
-    font-size:1rem; font-weight:600; border-radius:8px; padding:10px 0;
-    pointer-events:auto; text-decoration:none; text-align:center;
+    background:var(--card); border:1px solid var(--border);
+    color:var(--text)!important; font-size:1rem; font-weight:700; border-radius:8px; padding:10px 0;
+    flex:1; text-decoration:none;
   }
-  .bottom-nav .btn:hover{ filter:brightness(1.1) }
-  .bottom-nav .active-btn{ background:#2d2d2d!important }
-  @supports(padding:max(0px)){ .bottom-nav{ padding-bottom:max(12px, env(safe-area-inset-bottom)) } }
+  .bottom-nav .active-btn{ background:var(--pill-active)!important }
+
+  @media (max-width: 768px){
+    .map-card{ height: calc(100vh - 190px); }
+  }
 </style>
 </head>
 <body>
 
-<div class="container-wide">
-  <!-- Top nav (simple) -->
-  <nav class="mb-3 d-flex gap-2 flex-wrap">
-    <a class="btn btn-outline-light btn-sm" href="/index.html">Forecast</a>
-    <a class="btn btn-outline-light btn-sm" href="/validate.html">Validate</a>
-    <a class="btn btn-light btn-sm text-dark" href="/map.html">Map</a>
-    <a class="btn btn-outline-light btn-sm" href="/history.html">History</a>
-  </nav>
+<div class="container-fluid">
 
-  <!-- Scope chips -->
-  <div id="scopes" class="mb-2">
-    <span class="scope-pill active" data-region="north_america" data-city="los_angeles">North America · Los Angeles</span>
-    <span class="scope-pill" data-region="north_america" data-city="san_francisco">North America · San Francisco</span>
-    <span class="scope-pill" data-region="north_america" data-city="new_york">North America · New York</span>
+  <!-- Top bar: scopes + theme toggle -->
+  <div class="topbar">
+    <div id="scopes">
+      <span class="scope-pill active" data-region="north_america" data-city="california">North America · California</span>
+      <span class="scope-pill" data-region="north_america" data-city="san_francisco">North America · San Francisco</span>
+      <span class="scope-pill" data-region="north_america" data-city="new_york">North America · New York</span>
+    </div>
+
+    <button id="themeToggle" class="theme-toggle" type="button" title="Toggle theme">
+      <i class="fa-solid fa-circle-half-stroke"></i> <span id="themeLabel">Light</span>
+    </button>
   </div>
 
-  <h1 class="mb-2" id="title">Map — North America / Los Angeles</h1>
-  <small class="dim d-block mb-2" id="meta">Loading…</small>
-  <div id="map" class="overflow-hidden"></div>
-</div>
+  <!-- Map “card” fills page -->
+  <div class="map-card">
+    <div class="d-flex align-items-baseline justify-content-between mb-2">
+      <h5 class="m-0" id="title">Map — North America / California</h5>
+      <small class="dim" id="meta">Loading…</small>
+    </div>
+    <div id="map" class="overflow-hidden"></div>
+  </div>
 
-<!-- Fixed Bottom Nav -->
-<div class="bottom-nav">
-  <a class="btn" href="/index.html">Forecast</a>
-  <a class="btn" href="/validate.html">Validate</a>
-  <a class="btn active-btn" href="/map.html">Map</a>
-  <a class="btn" href="/history.html">History</a>
+  <!-- Bottom Nav -->
+  <div class="bottom-nav" id="bottomNav">
+    <a class="btn" href="/index.html">Forecast</a>
+    <a class="btn" href="/validate.html">Validate</a>
+    <a class="btn active-btn" href="/map.html">Map</a>
+    <a class="btn" href="/history.html">History</a>
+  </div>
 </div>
 
 <!-- Leaflet -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Icons -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/js/all.min.js" defer></script>
+
 <script>
 const API_BASE = "http://localhost:8000";
 const DEFAULT_REGION = "north_america";
-const DEFAULT_CITY = "los_angeles";
+const DEFAULT_CITY = "california";
 
-// fallback city centers
+/* Fallback city centers */
 const CITY_CENTER = {
-  los_angeles:[34.0522,-118.2437],
+  california:[36.7783,-119.4179],
   san_francisco:[37.7749,-122.4194],
   new_york:[40.7128,-74.0060]
 };
 
-// AQI color scale
+/* AQI band colors */
 function aqiBand(aqi){
   if(aqi==null||isNaN(aqi)) return {label:"Unknown", color:"#888"};
   if(aqi<=50)  return {label:"Good", color:"#38d37c"};
@@ -93,13 +162,42 @@ function aqiBand(aqi){
   return {label:"Hazardous", color:"#7a0177"};
 }
 
-// Map init
-const map = L.map('map',{zoomControl:true, scrollWheelZoom:true});
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
-  maxZoom:19, attribution:'© OpenStreetMap, © CARTO'
-}).addTo(map);
+/* Theme handling + basemap swap */
+function applyTheme(mode){
+  if(mode==='light'){ document.body.classList.add('light'); }
+  else { document.body.classList.remove('light'); }
+  localStorage.setItem('aqi_theme', mode);
+  document.getElementById('themeLabel').textContent = (mode==='light') ? 'Dark' : 'Light';
 
-// Legend
+  if(window._map && window._baseDark && window._baseLight){
+    if(mode==='light'){
+      if(window._map.hasLayer(window._baseDark)) window._map.removeLayer(window._baseDark);
+      if(!window._map.hasLayer(window._baseLight)) window._baseLight.addTo(window._map);
+    }else{
+      if(window._map.hasLayer(window._baseLight)) window._map.removeLayer(window._baseLight);
+      if(!window._map.hasLayer(window._baseDark)) window._baseDark.addTo(window._map);
+    }
+  }
+}
+function toggleTheme(){
+  const cur = localStorage.getItem('aqi_theme') || 'dark';
+  applyTheme(cur==='dark' ? 'light' : 'dark');
+}
+
+/* Map init */
+const map = L.map('map',{zoomControl:true, scrollWheelZoom:true});
+window._map = map;
+
+const darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+  maxZoom:19, attribution:'© OpenStreetMap, © CARTO'
+});
+const lightTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+  maxZoom:19, attribution:'© OpenStreetMap, © CARTO'
+});
+window._baseDark = darkTiles;
+window._baseLight = lightTiles;
+
+/* Legend */
 const legend = L.control({position:'bottomright'});
 legend.onAdd = function(){
   const div = L.DomUtil.create('div','legend');
@@ -117,25 +215,25 @@ legend.onAdd = function(){
 };
 legend.addTo(map);
 
-// Layers
+/* Layers */
 let pointsLayer = L.layerGroup().addTo(map);
 let bounds = null;
 
-// API calls
-async function fetchMap(region, city){
-  const url = `${API_BASE}/api/map?region=${encodeURIComponent(region)}&city=${encodeURIComponent(city)}`;
-  const r = await fetch(url);
-  if(!r.ok) throw new Error("map api " + r.status);
-  return r.json();
+/* Safe fetch helper */
+async function fetchJSON(url){
+  try{
+    const r = await fetch(url);
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    return await r.json();
+  }catch(e){
+    console.warn('Fetch failed:', url, e);
+    return null;
+  }
 }
-async function fetchForecast(region, city){
-  const url = `${API_BASE}/api/forecast?region=${encodeURIComponent(region)}&city=${encodeURIComponent(city)}`;
-  const r = await fetch(url);
-  if(!r.ok) throw new Error("forecast api " + r.status);
-  return r.json();
-}
+function mapURL(region, city){ return `${API_BASE}/api/map?region=${encodeURIComponent(region)}&city=${encodeURIComponent(city)}`; }
+function forecastURL(region, city){ return `${API_BASE}/api/forecast?region=${encodeURIComponent(region)}&city=${encodeURIComponent(city)}`; }
 
-// Normalize /api/map payload (points or grid)
+/* Normalize /api/map payload */
 function parseMapPayload(p){
   if(p && Array.isArray(p.points)){
     const pts = p.points
@@ -156,7 +254,7 @@ function parseMapPayload(p){
   return null;
 }
 
-// Draw points
+/* Draw points */
 function drawPoints(pts){
   pointsLayer.clearLayers();
   bounds = null;
@@ -177,7 +275,7 @@ function drawPoints(pts){
   if(bounds){ map.fitBounds(bounds.pad(0.15)); }
 }
 
-// Fallback marker
+/* Fallback marker */
 function drawFallbackMarker(city, forecast){
   pointsLayer.clearLayers();
   const center = CITY_CENTER[city] || [37,-95];
@@ -189,37 +287,34 @@ function drawFallbackMarker(city, forecast){
   map.setView(center, 9);
 }
 
-// Load flow
+/* Load flow */
 const CURRENT = {region: DEFAULT_REGION, city: DEFAULT_CITY};
 
 async function loadMap(region, city){
   document.getElementById('title').textContent = `Map — ${region.replace('_',' ')} / ${city.replace('_',' ')}`;
   document.getElementById('meta').textContent = 'Loading…';
-  try{
-    const mp = await fetchMap(region, city);
-    const norm = parseMapPayload(mp);
-    if(norm && norm.points?.length){
-      drawPoints(norm.points);
-      document.getElementById('meta').textContent = `Last updated ${norm.ts ? new Date(norm.ts).toLocaleString() : '—'} • ${norm.points.length} points`;
-      return;
-    }
-    throw new Error("map payload unusable");
-  }catch(e){
-    // fallback to forecast
-    try{
-      const fc = await fetchForecast(region, city);
-      drawFallbackMarker(city, fc);
-      document.getElementById('meta').textContent = `Fallback view • Updated ${fc.ts ? new Date(fc.ts).toLocaleString() : '—'}`;
-    }catch(e2){
-      // last resort center only
-      pointsLayer.clearLayers();
-      map.setView(CITY_CENTER[city] || [37,-95], 5);
-      document.getElementById('meta').textContent = 'Unable to fetch map/forecast data';
-    }
+
+  const mp = await fetchJSON(mapURL(region, city));
+  const norm = parseMapPayload(mp);
+  if(norm && norm.points?.length){
+    drawPoints(norm.points);
+    document.getElementById('meta').textContent = `Last updated ${norm.ts ? new Date(norm.ts).toLocaleString() : '—'} • ${norm.points.length} points`;
+    return;
   }
+
+  const fc = await fetchJSON(forecastURL(region, city));
+  if(fc){
+    drawFallbackMarker(city, fc);
+    document.getElementById('meta').textContent = `Fallback view • Updated ${fc.ts ? new Date(fc.ts).toLocaleString() : '—'}`;
+    return;
+  }
+
+  pointsLayer.clearLayers();
+  map.setView(CITY_CENTER[city] || [37,-95], 5);
+  document.getElementById('meta').textContent = 'Unable to fetch map/forecast data';
 }
 
-// Scope switching
+/* Scopes */
 document.getElementById('scopes').addEventListener('click', async (e)=>{
   const pill = e.target.closest('.scope-pill');
   if(!pill) return;
@@ -230,10 +325,36 @@ document.getElementById('scopes').addEventListener('click', async (e)=>{
   await loadMap(CURRENT.region, CURRENT.city);
 });
 
-// Boot
+/* Bottom nav path fixer (works from / or /public/) */
+function fixBottomNav(){
+  const nav = document.getElementById('bottomNav');
+  if(!nav) return;
+  const underPublic = location.pathname.toLowerCase().includes('/public/');
+  const basePrefix = underPublic ? '/public/' : '/';
+  Array.from(nav.querySelectorAll('a.btn')).forEach(a=>{
+    const href = a.getAttribute('href') || '';
+    a.setAttribute('href', (basePrefix + href).replace(/\/{2,}/g,'/'));
+  });
+}
+
+/* Resize observer to keep map full-page after window resize */
+function setupResize(){
+  const ro = new ResizeObserver(()=>{ setTimeout(()=>{ map.invalidateSize(); }, 50); });
+  ro.observe(document.querySelector('.map-card'));
+}
+
+/* Boot */
 document.addEventListener('DOMContentLoaded', async ()=>{
+  const saved = localStorage.getItem('aqi_theme') || 'dark';
+  if(saved==='light'){ lightTiles.addTo(map); } else { darkTiles.addTo(map); }
+  applyTheme(saved);
+  document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
   map.setView(CITY_CENTER[DEFAULT_CITY] || [37,-95], 6);
   await loadMap(CURRENT.region, CURRENT.city);
+
+  fixBottomNav();
+  setupResize();
 });
 </script>
 </body>
