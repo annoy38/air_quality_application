@@ -383,7 +383,7 @@ curl "http://localhost:8080/metrics"
 
 ## 📜 License
 
-MIT © 2025 **[Your Name]**
+MIT © 2025 **Team Saviour**
 
 ---
 
