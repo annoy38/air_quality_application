@@ -2,7 +2,10 @@
 
 ### **From EarthData to Action: Cloud Computing with Earth Observation Data for Predicting Cleaner, Safer Skies**
 
+
+
 ---
+
 
 ## 🌍 TEMPO Air Quality API
 
@@ -11,7 +14,32 @@ This project integrates **NASA TEMPO satellite data**, **OpenAQ ground measureme
 It processes data into **CSV files**, provides **forecasts**, and exposes a **FastAPI service** with health & metrics endpoints.
 
 ---
+## Air Quality Application Website
 
+
+  <p align="center">
+    <img src="https://i.postimg.cc/GtVHjcy9/Screenshot-111.png" alt="Home Page" width="900"><br/>
+    <em>Home Page</em>
+  </p>
+  <p align="center">
+    <img src="https://i.postimg.cc/zBkQWB4C/Screenshot-112.png" alt="Subscribe Popup" width="900"><br/>
+    <em>Subscribe popup</em>
+  </p>
+  <p align="center">
+    <img src="https://i.postimg.cc/g29KzpTh/Screenshot-105.png" alt="Validate Page" width="900"><br/>
+    <em>Validate page</em>
+  </p>
+  <p align="center">
+    <img src="https://i.postimg.cc/sf79gXtP/Screenshot-108.png" alt="Map View" width="900"><br/>
+    <em>Map</em>
+  </p>
+  <p align="center">
+    <img src="https://i.postimg.cc/tJbjGJxb/Screenshot-114.png" alt="History Page" width="900"><br/>
+    <em>History</em>
+  </p>
+</details>
+
+---
 ## 🤏 About The Team
 
 Forecasting Cleaner, Safer Skies is an innovative project designed to combat air pollution using NASA’s open-source satellite data. Our system applies advanced predictive modeling to forecast harmful air quality conditions before they occur. Unlike delayed alerts, it provides real-time warnings, empowering communities, health agencies, & policymakers to take preventive measures & build a safer tomorrow.
@@ -33,20 +61,30 @@ Forecasting Cleaner, Safer Skies is an innovative project designed to combat air
 
 ```text
 tempo_api-call/
-├── air_quality_api.py     # API server (main entrypoint)
-├── alert_user.py          # Email/SMS alert system
-├── config.py              # Loads environment variables
-├── forecaster.py          # Forecasting logic
-├── fuse_validate_merge.py # Data fusion & validation
-├── logging_utils.py       # Logging helpers
-├── main.py                # Alternate entrypoint
-├── openaq_api.py          # OpenAQ fetcher
-├── tempo_api.py           # TEMPO fetcher (Harmony)
-├── weather_api.py         # Weather fetcher
-├── visual_map.py          # Folium map visualizer
-├── requirements.txt       # Python dependencies
-├── .env                   # Environment configuration
-└── out/                   # Output CSV files
+├── air_quality_api.py      # API server (main entrypoint)
+├── alert_user.py           # Email/SMS alert system
+├── config.py               # Loads environment variables
+├── forecaster.py           # Forecasting logic
+├── fuse_validate_merge.py  # Data fusion & validation
+├── logging_utils.py        # Logging helpers
+├── main.py                 # Alternate entrypoint
+├── net_utils.py            # Network utilities (helpers)
+├── openaq_api.py           # OpenAQ fetcher
+├── tempo_api.py            # TEMPO fetcher (Harmony)
+├── visual_map.py           # Folium map visualizer
+├── weather_api.py          # Weather fetcher
+│
+├── requirements.txt        # Python dependencies
+├── Dockerfile              # Container build (optional)
+├── .env                    # Environment configuration (local)
+├── README.md               # Project documentation
+├── static_server.py        # Simple static HTTP server
+│
+├── index.html              # Home (Dashboard)
+├── history.html            # History view
+├── map.html                # Map view
+└── validate.html           # Validation view
+
 ```
 
 ---
