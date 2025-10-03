@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -13,19 +13,100 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
 
   <style>
-    body { background-color:#111; color:#fff !important; font-family:'Segoe UI',sans-serif; }
-    .card{ background:#1a1a1a; border:none; border-radius:12px; padding:18px; margin-bottom:20px; color:#fff !important; height:100%; }
-    .big-check{ font-size:60px; color:#38d37c; margin-bottom:10px; }
+    :root{
+      --bg:#111;
+      --text:#fff;
+      --card:#1a1a1a;
+      --nav:#1b1b1b;
+      --border:#333;
+      --pill:#222;
+      --pill-active:#2d2d2d;
+      --accent:#38d37c;
+      --muted: color-mix(in srgb, var(--text) 55%, transparent);
+      --grid: rgba(255,255,255,0.12);
+    }
+    /* Light theme */
+    body.light{
+      --bg:#ffffff;
+      --text:#111111;       /* light mode text = black */
+      --card:#f5f5f7;
+      --nav:#ececf0;
+      --border:#d8d8df;
+      --pill:#efeff3;
+      --pill-active:#e2e2e9;
+      --accent:#1aa366;
+      --muted: color-mix(in srgb, var(--text) 45%, transparent);
+      --grid: rgba(0,0,0,0.12);
+    }
+
+    body{ background-color:var(--bg); color:var(--text) !important; font-family:'Segoe UI',sans-serif; }
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:18px; margin-bottom:20px;
+      color:var(--text) !important; height:100%;
+    }
+
+    .big-check{ font-size:60px; color:var(--accent); margin-bottom:10px; }
     .big-text{ font-size:28px; font-weight:700; }
+
     .check-list{ list-style:none; padding-left:0; }
-    .check-list li{ font-size:1rem; font-weight:600; margin-bottom:6px; }
-    .check-list i{ color:#38d37c; margin-right:8px; }
-    .json-btn{ background:#2d2d2d; border:none; border-radius:8px; padding:10px 15px; color:#fff; font-weight:600; cursor:pointer; width:100%; }
-    .chart-container{ background:#1a1a1a; border-radius:12px; padding:18px; margin-bottom:20px; height:440px; }
+    .check-list li{ font-size:1rem; font-weight:600; margin-bottom:6px; color:var(--text) !important; }
+    .check-list i{ color:var(--accent); margin-right:8px; }
+
+    .json-btn{
+      background:var(--pill);
+      border:1px solid var(--border);
+      border-radius:8px;
+      padding:10px 15px; color:var(--text);
+      font-weight:700; cursor:pointer; width:100%;
+    }
+
+    .chart-container{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:12px; padding:18px; margin-bottom:20px; height:440px;
+    }
     .chart-container canvas{ height:100% !important; }
-    .bottom-nav .btn{ background:#1a1a1a; border:none; color:#fff !important; flex:1; margin:3px; font-size:1.05rem; font-weight:700; }
-    .active-btn{ background:#2d2d2d !important; }
+
+    .bottom-nav .btn{
+      background:var(--card);
+      border:1px solid var(--border);
+      color:var(--text) !important;
+      flex:1; margin:3px; font-size:1.05rem; font-weight:700;
+    }
+    .active-btn{ background:var(--pill-active) !important; }
+
     .section-gap{ margin-top:15px; }
+
+    /* Top bar + scopes + theme */
+    .topbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .nav-buttons .btn{ background:var(--nav); border:1px solid var(--border); color:var(--text) !important; margin:5px; font-size:1rem; font-weight:700; }
+    .scope-pill{
+      background:var(--pill);
+      border:1px solid var(--border);
+      color:var(--text);
+      border-radius:999px; padding:6px 12px; margin:5px;
+      font-weight:700; cursor:pointer; user-select:none;
+    }
+    .scope-pill.active{ background:var(--pill-active); }
+
+    .theme-toggle{
+      border:1px solid var(--border);
+      background:var(--pill);
+      color:var(--text);
+      border-radius:999px; padding:8px 12px; font-weight:700;
+    }
+    .theme-toggle i{ margin-right:6px; }
+
+    .text-muted, small, .dim{ color:var(--muted) !important; }
+
+    /* Make Bootstrap close icon visible in both themes */
+    .btn-close{ filter: invert(1); }
+    body.light .btn-close{ filter: invert(0); }
+
     @media(max-width:768px){ .big-text{font-size:22px} .big-check{font-size:45px} .chart-container{height:360px} }
     @media(max-width:576px){ .chart-container{height:300px} .json-btn{font-size:.9rem; padding:8px 12px} }
   </style>
@@ -34,6 +115,19 @@
 
 <div class="container-fluid p-3">
 
+  <!-- Top bar: scopes + theme toggle -->
+  <div class="topbar mb-2">
+    <div class="d-flex flex-wrap nav-buttons" id="scopeBar">
+      <span class="scope-pill active" data-region="north_america" data-city="california">North America · California</span>
+      <span class="scope-pill" data-region="north_america" data-city="san_francisco">North America · San Francisco</span>
+      <span class="scope-pill" data-region="north_america" data-city="new_york">North America · New York</span>
+    </div>
+
+    <button id="themeToggle" class="theme-toggle" type="button" title="Toggle theme">
+      <i class="fa-solid fa-circle-half-stroke"></i> <span id="themeLabel">Light</span>
+    </button>
+  </div>
+
   <!-- Top Section -->
   <div class="row">
     <!-- Data Validated -->
@@ -41,7 +135,7 @@
       <div class="card text-center w-100 d-flex align-items-center justify-content-center">
         <i class="fas fa-check-circle big-check" id="statusIcon" aria-hidden="true"></i>
         <div class="big-text" id="statusText">Data Validated</div>
-        <small class="text-muted" id="statusMeta"></small>
+        <small id="statusMeta"></small>
       </div>
     </div>
 
@@ -97,46 +191,87 @@
 
   <!-- Bottom Nav -->
   <div class="d-flex bottom-nav mt-2" id="bottomNav">
-    <a class="btn nav-btn" href="forecast.html">Forecast</a>
+    <a class="btn nav-btn" href="index.html">Forecast</a>
     <a class="btn nav-btn active-btn" href="validate.html">Validate</a>
     <a class="btn nav-btn" href="map.html">Map</a>
     <a class="btn nav-btn" href="history.html">History</a>
   </div>
 </div>
 
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-/** ============ Config ============ **/
+/** ================= Config ================= **/
 const API_BASE = "http://localhost:8000"; // change if needed
-const VALIDATE_URL = API_BASE + "/api/validate";
-const FORECAST_URL = API_BASE + "/api/forecast"; // optional: for timestamps/status
+const ENDPOINTS = {
+  validate: (region, city) => `${API_BASE}/api/validate?region=${encodeURIComponent(region)}&city=${encodeURIComponent(city)}`,
+  forecast: (region, city) => `${API_BASE}/api/forecast?region=${encodeURIComponent(region)}&city=${encodeURIComponent(city)}`
+};
 
-/** ============ Helpers ============ **/
+/** ================= Theme ================= **/
+function applyTheme(mode){
+  const body = document.body;
+  if(mode === 'light'){ body.classList.add('light'); } else { body.classList.remove('light'); }
+  localStorage.setItem('aqi_theme', mode);
+  document.getElementById('themeLabel').textContent = (mode === 'light') ? 'Dark' : 'Light';
+  // recolor charts
+  const textColor = getComputedStyle(document.body).getPropertyValue('--text').trim() || '#111';
+  [window._tempoChart, window._pmChart].forEach(ch=>{
+    if(!ch) return;
+    ch.options.plugins.legend.labels.color = textColor;
+    ch.options.scales.x.ticks.color = textColor;
+    ch.options.scales.y.ticks.color = textColor;
+    ch.options.scales.x.grid.color = getComputedStyle(document.body).getPropertyValue('--grid').trim() || 'rgba(255,255,255,0.12)';
+    ch.options.scales.y.grid.color = getComputedStyle(document.body).getPropertyValue('--grid').trim() || 'rgba(255,255,255,0.12)';
+    ch.update();
+  });
+}
+function toggleTheme(){
+  const cur = localStorage.getItem('aqi_theme') || 'dark';
+  applyTheme(cur === 'dark' ? 'light' : 'dark');
+}
+
+/** ================= Helpers ================= **/
+function safeGet(obj, path, fallback='—'){
+  try{
+    return path.split('.').reduce((o,k)=> (o && k in o) ? o[k] : undefined, obj) ?? fallback;
+  }catch(_){ return fallback; }
+}
+
 function downloadJSON(filename, dataObj) {
-  const blob = new Blob([JSON.stringify(dataObj, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click();
-  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 0);
+  try{
+    const pretty = JSON.stringify(dataObj, null, 2);
+    const blob = new Blob([pretty], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 0);
+  }catch(e){
+    console.error('Download failed', e);
+    alert('Unable to export JSON in this environment.');
+  }
 }
 
 function makeLineChart(ctx, labels, datasets) {
+  const textColor = getComputedStyle(document.body).getPropertyValue('--text').trim() || '#ffffff';
+  const gridColor = getComputedStyle(document.body).getPropertyValue('--grid').trim() || 'rgba(255,255,255,0.12)';
   return new Chart(ctx, {
     type: 'line',
     data: { labels, datasets },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: 'white' } } },
+      plugins: { legend: { labels: { color: textColor } } },
       scales: {
-        x: { ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } },
-        y: { ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.1)' } }
+        x: { ticks: { color: textColor }, grid: { color: gridColor } },
+        y: { ticks: { color: textColor }, grid: { color: gridColor } }
       }
     }
   });
 }
 
-/** ============ Fallback demo series (if API doesn’t provide) ============ **/
+/** ================= Fallback demo series ================= **/
 const FALLBACK = {
   tempoVsGround: {
     labels: ['12 PM','6 PM','12 AM','6 AM'],
@@ -150,82 +285,101 @@ const FALLBACK = {
   }
 };
 
-/** ============ Render ============ **/
-async function init() {
-  let validateData = null;
-  let forecastMeta = null;
-
-  // fetch validate metrics
-  try {
-    const r = await fetch(VALIDATE_URL);
-    validateData = await r.json();
-  } catch (e) {
-    console.error("validate fetch failed", e);
-    validateData = { result: "error", rmse: null, mae: null, error: String(e) };
+/** ================= Data Loader ================= **/
+async function fetchJSON(url, fallback=null){
+  try{
+    const r = await fetch(url);
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    return await r.json();
+  }catch(e){
+    console.warn('Fetch failed → fallback', url, e);
+    return fallback;
   }
+}
 
-  // optional: fetch forecast meta (timestamp/status)
-  try {
-    const r2 = await fetch(FORECAST_URL);
-    forecastMeta = await r2.json();
-  } catch (e) {
-    forecastMeta = null;
-  }
+async function loadValidate(region="north_america", city="california"){
+  const validateUrl = ENDPOINTS.validate(region, city);
+  const forecastUrl = ENDPOINTS.forecast(region, city);
 
-  // ---- Fill metrics/card ----
-  document.getElementById("rmse").textContent = (validateData && validateData.rmse != null) ? validateData.rmse : "—";
-  document.getElementById("mae").textContent  = (validateData && validateData.mae  != null) ? validateData.mae  : "—";
-  document.getElementById("result").textContent = (validateData && validateData.result) ? validateData.result : "—";
+  const [validateData, forecastMeta] = await Promise.all([
+    fetchJSON(validateUrl, null),
+    fetchJSON(forecastUrl, null)
+  ]);
+
+  // ---- Metrics/card (safe) ----
+  document.getElementById("rmse").textContent = safeGet(validateData, "rmse");
+  document.getElementById("mae").textContent  = safeGet(validateData, "mae");
+  document.getElementById("result").textContent = safeGet(validateData, "result");
 
   const statusText = document.getElementById("statusText");
   const statusIcon = document.getElementById("statusIcon");
-  if (validateData && (validateData.result || "").toLowerCase() === "ok") {
-    statusText.textContent = "Data Validated";
-    statusIcon.classList.remove("fa-times-circle");
-    statusIcon.classList.add("fa-check-circle");
-    statusIcon.style.color = "#38d37c";
-  } else {
-    statusText.textContent = "Validation Issue";
-    statusIcon.classList.remove("fa-check-circle");
-    statusIcon.classList.add("fa-times-circle");
-    statusIcon.style.color = "#ff6b6b";
-  }
+  const ok = String(safeGet(validateData, "result", "ok")).toLowerCase() === "ok";
+  statusText.textContent = ok ? "Data Validated" : "Validation Warning";
+  statusIcon.classList.remove("fa-times-circle","fa-check-circle");
+  statusIcon.classList.add(ok ? "fa-check-circle" : "fa-times-circle");
+  statusIcon.style.color = ok ? getComputedStyle(document.body).getPropertyValue('--accent').trim() || "#38d37c" : "#d73027";
 
-  const tsMeta = (forecastMeta && forecastMeta.ts) ? forecastMeta.ts : new Date().toISOString();
-  document.getElementById("statusMeta").textContent = `as of ${tsMeta}`;
-  document.getElementById("tempoUpdate").textContent = `Last updated ${new Date(tsMeta).toLocaleTimeString()}`;
+  // timestamps
+  const ts = safeGet(forecastMeta, "ts", new Date().toISOString());
+  document.getElementById("statusMeta").textContent = `as of ${ts}`;
+  const nice = new Date(ts);
+  document.getElementById("tempoUpdate").textContent = `Last updated ${isNaN(nice) ? ts : nice.toLocaleTimeString()}`;
 
-  // ---- Build charts (use API series if present; else fallback) ----
-  // Expected (optional) API shape examples:
-  // validateData.series_tempo_ground = { labels: [...], tempo: [...], ground: [...] }
-  // validateData.series_pm_o3        = { labels: [...], pm25: [...], o3: [...] }
+  // ---- Series (fallbacks if missing) ----
+  const tg = safeGet(validateData, "series_tempo_ground", FALLBACK.tempoVsGround);
+  const pm = safeGet(validateData, "series_pm_o3", FALLBACK.pm_o3);
 
-  const tg = (validateData && validateData.series_tempo_ground) ? validateData.series_tempo_ground : FALLBACK.tempoVsGround;
-  const pm = (validateData && validateData.series_pm_o3) ? validateData.series_pm_o3 : FALLBACK.pm_o3;
+  // sanitize series shapes
+  const tgLabels = Array.isArray(tg.labels) && tg.labels.length ? tg.labels : FALLBACK.tempoVsGround.labels;
+  const tgTempo  = Array.isArray(tg.tempo)  && tg.tempo.length  ? tg.tempo  : FALLBACK.tempoVsGround.tempo;
+  const tgGround = Array.isArray(tg.ground) && tg.ground.length ? tg.ground : FALLBACK.tempoVsGround.ground;
 
+  const pmLabels = Array.isArray(pm.labels) && pm.labels.length ? pm.labels : FALLBACK.pm_o3.labels;
+  const pm25     = Array.isArray(pm.pm25)   && pm.pm25.length   ? pm.pm25   : FALLBACK.pm_o3.pm25;
+  const o3       = Array.isArray(pm.o3)     && pm.o3.length     ? pm.o3     : FALLBACK.pm_o3.o3;
+
+  // ---- Build/Update charts ----
   const tempoCtx = document.getElementById('tempoChart').getContext('2d');
-  makeLineChart(tempoCtx, tg.labels, [
-    { label: 'TEMPO',  data: tg.tempo,  borderColor: 'rgb(190,190,190)', tension: 0.4 },
-    { label: 'Ground', data: tg.ground, borderColor: 'cyan',             tension: 0.4 }
+  if(window._tempoChart){ window._tempoChart.destroy(); }
+  window._tempoChart = makeLineChart(tempoCtx, tgLabels, [
+    { label: 'TEMPO',  data: tgTempo,  borderColor: 'rgb(190,190,190)', tension: 0.4 },
+    { label: 'Ground', data: tgGround, borderColor: 'cyan',             tension: 0.4 }
   ]);
 
   const pmCtx = document.getElementById('pmChart').getContext('2d');
-  makeLineChart(pmCtx, pm.labels, [
-    { label: 'PM₂.₅', data: pm.pm25, borderColor: 'violet', tension: 0.4 },
-    { label: 'O₃',    data: pm.o3,   borderColor: 'cyan',   tension: 0.4 }
+  if(window._pmChart){ window._pmChart.destroy(); }
+  window._pmChart = makeLineChart(pmCtx, pmLabels, [
+    { label: 'PM₂.₅', data: pm25, borderColor: 'violet', tension: 0.4 },
+    { label: 'O₃',    data: o3,   borderColor: 'cyan',   tension: 0.4 }
   ]);
 
   // ---- JSON Export ----
   const exportBtn = document.getElementById("exportBtn");
   exportBtn.onclick = () => {
     downloadJSON("validate_payload.json", {
-      validate: validateData,
-      forecast_meta: forecastMeta
+      region, city,
+      validate: validateData ?? { note:"fallback/null" },
+      forecast_meta: forecastMeta ?? { note:"fallback/null" }
     });
   };
+}
 
-  // ---- Bottom nav: make sure it works under / or /public/ ----
+/** ================= Scope wiring ================= **/
+function wireScopes(){
+  const bar = document.getElementById('scopeBar');
+  bar.addEventListener('click', async (e)=>{
+    const pill = e.target.closest('.scope-pill');
+    if(!pill) return;
+    bar.querySelectorAll('.scope-pill').forEach(p=>p.classList.remove('active'));
+    pill.classList.add('active');
+    await loadValidate(pill.dataset.region, pill.dataset.city);
+  });
+}
+
+/** ================= Bottom nav fix (public/) ================= **/
+function fixBottomNav(){
   const nav = document.getElementById('bottomNav');
+  if(!nav) return;
   const pathLower = location.pathname.toLowerCase();
   const underPublic = pathLower.includes('/public/');
   const basePrefix = underPublic ? '/public/' : '/';
@@ -235,8 +389,18 @@ async function init() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', init);
-</script>
+/** ================= Boot ================= **/
+document.addEventListener('DOMContentLoaded', async ()=>{
+  // Theme first (so initial paint is correct)
+  const saved = localStorage.getItem('aqi_theme') || 'dark';
+  applyTheme(saved);
+  document.getElementById('themeToggle').addEventListener('click', toggleTheme);
 
+  wireScopes();
+  fixBottomNav();
+
+  await loadValidate("north_america","california");
+});
+</script>
 </body>
 </html>
