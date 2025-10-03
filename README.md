@@ -1,7 +1,20 @@
-# 🌍 TEMPO Air Quality API
+# NASA Space Apps Challenge 2025
+
+### **From EarthData to Action: Cloud Computing with Earth Observation Data for Predicting Cleaner, Safer Skies**
+
+---
+
+## 🌍 TEMPO Air Quality API
+
 
 This project integrates **NASA TEMPO satellite data**, **OpenAQ ground measurements**, and **Open-Meteo weather** into a unified API.
 It processes data into **CSV files**, provides **forecasts**, and exposes a **FastAPI service** with health & metrics endpoints.
+
+---
+
+## 🤏 About The Team
+
+Forecasting Cleaner, Safer Skies is an innovative project designed to combat air pollution using NASA’s open-source satellite data. Our system applies advanced predictive modeling to forecast harmful air quality conditions before they occur. Unlike delayed alerts, it provides real-time warnings, empowering communities, health agencies, & policymakers to take preventive measures & build a safer tomorrow.
 
 ---
 
@@ -55,7 +68,7 @@ If running locally, install system dependencies:
 ### 1️⃣ Clone
 
 ```bash
-git clone https://github.com/<your-username>/tempo_api-call.git
+git clone https://github.com/annoy38/air_quality_application.git
 cd tempo_api-call
 ```
 
@@ -380,6 +393,14 @@ curl "http://localhost:8080/metrics"
 ```
 
 ---
+
+## 👥 Team Members - Team Saviour
+|  # | Name                | Role                               | Focus / Responsibilities                                                     |
+| -: | ------------------- | ---------------------------------- | ---------------------------------------------------------------------------- |
+|  1 | **Snigdha Khan**    | Frontend Developer & Storyteller   | Dashboard UI/UX, charts & map views, presentation & docs                     |
+|  2 | **Shahriar Hayder** | Backend Developer                  | FastAPI services, data fusion pipeline, Docker/CI, observability             |
+|  3 | **Fahim Bhuiyan**   | Software Engineer & Data Scientist | Modeling & validation (NO₂ nowcast/forecast), metrics (RMSE/corr), data prep |
+
 
 ## 📜 License
 
